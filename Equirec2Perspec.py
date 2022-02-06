@@ -37,7 +37,8 @@ class Equirectangular:
         #self._img[:, :w/8, :] = cp[:, 7*w/8:, :]
         #self._img[:, w/8:, :] = cp[:, :7*w/8, :]
     
-
+    def GetEqui(self):
+        return self._img
     def GetPerspective(self, FOV, THETA, PHI, height, width):
         #
         # THETA is left/right angle, PHI is up/down angle, both in degree
