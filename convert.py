@@ -96,14 +96,8 @@ class DraggablePolygon:
 
 
 if __name__ == '__main__':
-    equ = E2P.Equirectangular('src/image.jpg')    # Load equirectangular image
     
-    #
-    # FOV unit is degree 
-    # theta is z-axis angle(right direction is positive, left direction is negative)
-    # phi is y-axis angle(up direction positive, down direction negative)
-    # height and width is output image dimension 
-    #
+   
     
     
     class Rect : 
@@ -113,7 +107,7 @@ if __name__ == '__main__':
             
     
     def DragRect(event, x, y, flags, params):
-        global ix, iy, drag, myRect, imConcat, copy, myRectP
+        global ix, iy, drag, myRect, imConcat, copy
         
         if (event == cv2.EVENT_LBUTTONDOWN):
             if ((x >= myRect.pt1[0])  and( x<= myRect.pt2[0]) and (y >= myRect.pt1[1]) and( y<= myRect.pt2[1])) : 
@@ -161,35 +155,62 @@ if __name__ == '__main__':
 
                 copy = imConcat.copy()
                 
-                cv2.rectangle(copy, pt1=pt1, pt2=pt2, color=(255,255,255), thickness=2)
+                cv2.rectangle(copy, pt1=pt1, pt2=pt2, color=rectColor, thickness=2)
                 
                 
         if (event == cv2.EVENT_LBUTTONUP):
             if (drag) :
-                
+  
                 dx = x-ix
                 dy = y-iy
+                
+                pt1 = (myRect.pt1[0] + dx, myRect.pt1[1] + dy)
+                pt2 = (myRect.pt2[0] + dx, myRect.pt2[1]+ dy)
+                print(pt1)
+                print(pt2)
+                
                 myRect = Rect(pt1=(myRect.pt1[0] + dx, myRect.pt1[1] + dy), pt2=(myRect.pt2[0] + dx, myRect.pt2[1]+ dy))
                 
             drag = False
 
 
+    equiImg = cv2.imread('src/image.jpg', cv2.IMREAD_COLOR)
+    equ = E2P.Equirectangular(equiImg)    # Load equirectangular image
+    (h2, w2, n)  = equiImg.shape
+    
+    
+    
 
-
-    FOV = 90
-    resolution = 200
+    FOV = 20
+    resolution = 400
     ratio =  16./9.0
-    resSrc = 300
+    
+    
     
     h1 = resolution
     w1 = int(resolution * ratio) 
-    (h2, w2, n)  = equ.GetEqui().shape
     
-    
+    resSrc = int(w1)
     h2 = int(resSrc*h2/w2)
     w2 = resSrc
+    
+    
 
-    srcImg = cv2.resize(equ.GetEqui(), (w2,h2), interpolation=cv2.INTER_CUBIC)
+    
+    
+    
+    
+    srcImg = cv2.resize(equiImg, (w2,h2), interpolation=cv2.INTER_CUBIC)
+    
+   
+    #
+    # FOV unit is degree 
+    # theta is z-axis angle(right direction is positive, left direction is negative)
+    # phi is y-axis angle(up direction positive, down direction negative)
+    # height and width is output image dimension 
+    #
+    
+    rectColor = (0,0,0)
     
     hc = h1+h2
     wc = np.max([w1,w2])
@@ -233,18 +254,68 @@ if __name__ == '__main__':
     drag = False
     
     
+    copy = imConcat.copy()
+                
+    cv2.rectangle(copy, pt1=pt1, pt2=pt2, color=rectColor, thickness=2)
+                
     
-    cv2.rectangle(copy, pt1=myRect.pt1, pt2=myRect.pt2, color=(255,255,255), thickness=2
-    )
+    
     while(True):
 
         cv2.imshow(windowName, copy)
         cv2.setMouseCallback(windowName, DragRect)
-        key = cv2.waitKey(1) & 0xFF
+        key = cv2.waitKey(30) & 0xFF
         # press 'r' to reset the window
         if key == ord("r"):
             copy = imConcat.copy()
-
+        if (key == ord('+')) : 
+            FOV -= 10
+            if (FOV < 10) : FOV = 10
+            hr = int(resSrc/10 * FOV / 60. )
+            wr = int(hr * 16.0 / 9.0)
+            
+            pt1 = myRect.pt1
+            pt2 = myRect.pt2
+            
+            pt1 = (int(0.5*(pt1[0]+pt2[0]) -0.5*wr), int(0.5*(pt1[1]+pt2[1]) - 0.5*hr ))
+            pt2 = (int(0.5*(pt1[0]+pt2[0]) +0.5*wr), int(0.5*(pt1[1]+pt2[1]) + 0.5*hr ))
+            
+            myRect = Rect(pt1=pt1, pt2=pt2)
+            
+            lat = int((0.5*(pt1[0]+pt2[0]) - (offset + w2*0.5)) / (w2*0.5) *180)
+            lon = int(-(0.5*(pt1[1]+pt2[1]) - (h1 + h2*0.5)) / (h2*0.5) *90)
+                
+            img = equ.GetPerspective(FOV, lat , lon, h1, w1) # Specify parameters(FOV, theta, phi, height, width)
+             
+            offset  = int(0.5*(wc - w1))
+            imConcat[:h1,offset:w1 + offset, : ] = img
+            
+            
+            copy = imConcat.copy()
+            cv2.rectangle(copy, pt1=pt1, pt2=pt2, color=rectColor, thickness=2)
+            
+            print(FOV)
+        if (key == ord('-')) : 
+            FOV += 10
+            if (FOV > 150) : FOV = 150
+            hr = int(resSrc/10 * FOV / 60. )
+            wr = int(hr * 16.0 / 9.0)
+            
+            pt1 = myRect.pt1
+            pt2 = myRect.pt2
+            
+            pt1 = (int(0.5*(pt1[0]+pt2[0]) -0.5*wr), int(0.5*(pt1[1]+pt2[1]) - 0.5*hr ))
+            pt2 = (int(0.5*(pt1[0]+pt2[0]) +0.5*wr), int(0.5*(pt1[1]+pt2[1]) + 0.5*hr ))
+            
+            myRect = Rect(pt1=pt1, pt2=pt2)
+            lat = int((0.5*(pt1[0]+pt2[0]) - (offset + w2*0.5)) / (w2*0.5) *180)
+            lon = int(-(0.5*(pt1[1]+pt2[1]) - (h1 + h2*0.5)) / (h2*0.5) *90)
+            img = equ.GetPerspective(FOV, lat , lon, h1, w1) # Specify parameters(FOV, theta, phi, height, width)
+             
+            offset  = int(0.5*(wc - w1))
+            imConcat[:h1,offset:w1 + offset, : ] = img
+            copy = imConcat.copy()
+            cv2.rectangle(copy, pt1=pt1, pt2=pt2, color=rectColor, thickness=2)
         # if the 'c' key is pressed, break from the loop
         elif key == ord("c"):
             break
