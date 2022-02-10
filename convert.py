@@ -1,7 +1,7 @@
 
 import os
 import cv2 
-import Equirec2Perspec as E2P 
+import Equirec2Perspec2 as E2P 
 import matplotlib.pyplot as plt
 
 from mpl_toolkits.basemap import Basemap
